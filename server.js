@@ -1,5 +1,8 @@
 const express = require('express');
 
+//Import the mysql2 package
+const mysql = require('mysql2');
+
 //PORT designation and app expression
 const PORT = process.env.PORT || 3005;
 const app = express();
@@ -8,6 +11,18 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+//Code that connects the application to the MySQL database
+const db = mysql.createConnection(
+  {
+    host: 'localhost',
+    //Your MySQL username,
+    user: 'root',
+    //Your MySQL password
+    password: 'Luz3%E&NB/x.ENS',
+    database: 'election'
+  },
+  console.log('Connected to the election database.')
+);
 
 // app.get('/', (req, res) => {
 //   res.json({
