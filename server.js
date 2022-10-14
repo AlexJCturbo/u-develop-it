@@ -30,6 +30,18 @@ const db = mysql.createConnection(
 //   });
 // });
 
+/*Query the database with query() method to test the connection
+Once this method executes the SQL command, the callback function
+captures the responses from the query in two variables: err is the
+error response amd rows is the database query response
+*/
+db.query(`SELECT * FROM candidates`, (err, rows) => {
+  console.log(rows);
+});
+/*
+The object that is returned from the application is an array of
+objects, with each object representing a row of the candidates table.
+*/
 
 /*
 Route to handle user requests that aren't supported by the app
