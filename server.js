@@ -31,12 +31,13 @@ const db = mysql.createConnection(
 //   });
 // });
 
+//ROUTES FOR CANDIDATES
 /*Query the database with query() method to test the connection
 Once this method executes the SQL command, the callback function
 captures the responses from the query in two variables: err is the
 error response amd rows is the database query response
 */
-// Get all candidates
+//GET all candidates
 //we use app to create endpoints
 app.get('/api/candidates/', (req, res) => {
   const sql = `SELECT candidates.*, parties.name
@@ -63,7 +64,7 @@ The object that is returned from the application is an array of
 objects, with each object representing a row of the candidates table.
 */
 
-//Get a single candidate
+//GET a single candidate
 app.get('/api/candidate/:id', (req, res) => {
   const sql = `SELECT candidates.*, parties.name
               AS party_name
@@ -86,7 +87,7 @@ app.get('/api/candidate/:id', (req, res) => {
   });
 });
 
-//Delete a candidate using HTTP request method delete()
+//DELETE a candidate using HTTP request method delete()
 // ? = placeholder
 app.delete('/api/candidate/:id', (req, res) => {
   const sql = `DELETE FROM candidates WHERE id = ?`;
@@ -117,7 +118,7 @@ same SQL statements repeatedly using different values in place of the
 placeholder.
 */
 
-//Create a candidate
+//POST a candidate
 app.post('/api/candidate', ({ body }, res) => {
   const errors = inputCheck(body, 'first_name', 'last_name', 'industry_connected');
   if (errors) {
@@ -146,6 +147,94 @@ work, protecting the table from duplicate ids.
       message: 'success',
       data: body
     });
+  });
+});
+
+//PUT request to update candidates party
+app.put('/api/candidate/:id', (req, res) => {
+  const errors = inputCheck(req.body, 'party_id');
+  if (errors) {
+    res.status(400).json({ error: errors });
+    return;
+  }
+
+  const sql = `UPDATE candidates SET party_id = ? 
+              WHERE id = ?`;
+  //using a parameter for the candidate's id with req.params.id
+  const params = [req.body.party_id, req.params.id];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      // check if a record was found
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Candidate not found'
+      });
+    } else {
+      res.json({
+        message: 'updated',
+        data: req.body,
+        changes: result.affectedRows
+      });
+    }
+  });
+});
+
+
+//ROUTES FOR PARTIES
+//GET all parties
+app.get('/api/parties', (req, res) => {
+  const sql = `SELECT * FROM parties`;
+  db.query(sql, (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: rows
+    });
+  });
+});
+
+//GET a single party
+app.get('/api/party/:id', (req, res) => {
+  const sql = `SELECT * FROM parties WHERE id = ?`;
+  const params = [req.params.id];
+
+  db.query(sql, params, (err, row) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({
+      message: 'success',
+      data: row
+    });
+  });
+});
+
+//DELETE a party
+app.delete('/api/party/:id', (req, res) => {
+  const sql = `DELETE FROM parties WHERE id = ?`;
+  const params = [req.params.id];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      res.status(400).json({ error: res.message });
+      // checks if anything was deleted
+    } else if (!result.affectedRows) {
+      res.json({
+        message: 'Party not found'
+      });
+    } else {
+      res.json({
+        message: 'deleted',
+        changes: result.affectedRows,
+        id: req.params.id
+      });
+    }
   });
 });
 
