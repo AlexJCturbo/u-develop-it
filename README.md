@@ -14,9 +14,9 @@ This project produced the back end for U Vote It, a voting application for a  de
 
 ## Technologies
 - Node.js
-- Insomnia
 - Express.js
 - MySQL
+- Insomnia
 ###### [Back to Index](#Table-of-Contents)
 
 ## Contribution Guidelines
