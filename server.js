@@ -1,8 +1,10 @@
 const express = require('express');
-const inputCheck = require('./utils/inputCheck');
 
-//Import the mysql2 package
-const mysql = require('mysql2');
+//Exports connection the application to MySQL database
+const db = require('./db/connection');
+
+//require the directory where we have all the routes
+const apiRoutes = require('./routes/apiRoutes');
 
 //PORT designation and app expression
 const PORT = process.env.PORT || 3005;
@@ -12,231 +14,10 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-//Code that connects the application to the MySQL database
-const db = mysql.createConnection(
-  {
-    host: 'localhost',
-    //Your MySQL username,
-    user: 'root',
-    //Your MySQL password
-    password: 'Luz3%E&NB/x.ENS',
-    database: 'election'
-  },
-  console.log('Connected to the election database.')
-);
-
-// app.get('/', (req, res) => {
-//   res.json({
-//     message: 'Hello World!'
-//   });
-// });
-
-//ROUTES FOR CANDIDATES
-/*Query the database with query() method to test the connection
-Once this method executes the SQL command, the callback function
-captures the responses from the query in two variables: err is the
-error response amd rows is the database query response
-*/
-//GET all candidates
-//we use app to create endpoints
-app.get('/api/candidates/', (req, res) => {
-  const sql = `SELECT candidates.*, parties.name
-              AS party_name
-              FROM candidates
-              LEFT JOIN parties
-              ON candidates.party_id = parties.id;`;
-  db.query(sql, (err, rows) => {
-    if (err) {
-      res.status(500).json({error: err.message});
-      return;
-    }
-    /*Instead of logging the result, rows, from the database,
-    we'll send this response as a JSON object to the browser, using
-    res in the Express.js route callback.*/
-    res.json({
-      message: 'success',
-      data: rows
-    });
-  });
-});
-/*
-The object that is returned from the application is an array of
-objects, with each object representing a row of the candidates table.
-*/
-
-//GET a single candidate
-app.get('/api/candidate/:id', (req, res) => {
-  const sql = `SELECT candidates.*, parties.name
-              AS party_name
-              FROM candidates
-              LEFT JOIN parties
-              ON candidates.party_id = parties.id
-              WHERE candidates.id = ?`;
-  const params = [req.params.id];
-
-  db.query(sql, params, (err, row) => {
-    if (err) {
-      //Error status code changed to 400 to notify client the request wasn't accepted.
-      res.status(400).json({ error: err.message });
-      return;
-    }
-    res.json({
-      message: 'success',
-      data: row
-    });
-  });
-});
-
-//DELETE a candidate using HTTP request method delete()
-// ? = placeholder
-app.delete('/api/candidate/:id', (req, res) => {
-  const sql = `DELETE FROM candidates WHERE id = ?`;
-  const params = [req.params.id];
-
-  db.query(sql, params, (err, result) => {
-    if (err) {
-      res.statusMessage(400).json({ error: res.message });
-    } else if (!result.affectedRows) {
-      res.json({
-        message: 'Candidate not found'
-      });
-    } else {
-      res.json({
-        message: 'deleted',
-        //result.affectedRows will verify whether any rows were changed
-        changes: result.affectedRows,
-        id: req.params.id
-      });
-    }
-  });
-});
-
-/*
-The DELETE statement has a question mark (?) that denotes a placeholder,
-making this a prepared statement. A prepared statement can execute the
-same SQL statements repeatedly using different values in place of the
-placeholder.
-*/
-
-//POST a candidate
-app.post('/api/candidate', ({ body }, res) => {
-  const errors = inputCheck(body, 'first_name', 'last_name', 'industry_connected');
-  if (errors) {
-    res.status(400).json({ error: errors });
-    return;
-  }
-
-  const sql = `INSERT INTO candidates (first_name, last_name, industry_connected)
-  VALUES (?,?,?)`;
-    //The three placeholders must match the four values in params, so we must use an array.
-  const params = [body.first_name, body.last_name, body.industry_connected];
-  //MySQL will autogenerate the id and relieve us of the responsibility to know which id is available to populate.
-/*
-We can't insert another candidate with id 1 again, because that id is
-already taken. This is why we received the error Duplicate entry '1'
-for key 'candidates.PRIMARY'. This is the PRIMARY KEY constraint at
-work, protecting the table from duplicate ids.
-*/
-  //Uses the parameters sql and params to create the candidate
-  db.query(sql, params, (err, result) => {
-    if (err) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-    res.json({
-      message: 'success',
-      data: body
-    });
-  });
-});
-
-//PUT request to update candidates party
-app.put('/api/candidate/:id', (req, res) => {
-  const errors = inputCheck(req.body, 'party_id');
-  if (errors) {
-    res.status(400).json({ error: errors });
-    return;
-  }
-
-  const sql = `UPDATE candidates SET party_id = ? 
-              WHERE id = ?`;
-  //using a parameter for the candidate's id with req.params.id
-  const params = [req.body.party_id, req.params.id];
-
-  db.query(sql, params, (err, result) => {
-    if (err) {
-      res.status(400).json({ error: err.message });
-      // check if a record was found
-    } else if (!result.affectedRows) {
-      res.json({
-        message: 'Candidate not found'
-      });
-    } else {
-      res.json({
-        message: 'updated',
-        data: req.body,
-        changes: result.affectedRows
-      });
-    }
-  });
-});
-
-
-//ROUTES FOR PARTIES
-//GET all parties
-app.get('/api/parties', (req, res) => {
-  const sql = `SELECT * FROM parties`;
-  db.query(sql, (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({
-      message: 'success',
-      data: rows
-    });
-  });
-});
-
-//GET a single party
-app.get('/api/party/:id', (req, res) => {
-  const sql = `SELECT * FROM parties WHERE id = ?`;
-  const params = [req.params.id];
-
-  db.query(sql, params, (err, row) => {
-    if (err) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-    res.json({
-      message: 'success',
-      data: row
-    });
-  });
-});
-
-//DELETE a party
-app.delete('/api/party/:id', (req, res) => {
-  const sql = `DELETE FROM parties WHERE id = ?`;
-  const params = [req.params.id];
-
-  db.query(sql, params, (err, result) => {
-    if (err) {
-      res.status(400).json({ error: res.message });
-      // checks if anything was deleted
-    } else if (!result.affectedRows) {
-      res.json({
-        message: 'Party not found'
-      });
-    } else {
-      res.json({
-        message: 'deleted',
-        changes: result.affectedRows,
-        id: req.params.id
-      });
-    }
-  });
-});
+//After Express middleware
+/*Use apiRoutes; by adding the /api prefix here, we can remove it from
+the individual route expressions after we move them to their new home.*/
+app.use('/api', apiRoutes);
 
 /*
 Route to handle user requests that aren't supported by the app
@@ -244,10 +25,16 @@ Because this is a catchall route, its placement is very important.
 If we place this route above other routes, this route will override
 all others—so make sure that this is the last one.
 */
+// Default response for any other request (Not Found)
 app.use((req, res) => {
   res.status(404).end();
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start server after DB connection
+db.connect(err => {
+  if (err) throw err;
+  console.log('Database connected.');
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });
